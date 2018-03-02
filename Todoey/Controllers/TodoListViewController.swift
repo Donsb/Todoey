@@ -13,26 +13,13 @@ class TodoListViewController: UITableViewController {
     //MARK - Model
     var itemArray = [Item]()
     
-    let defaults = UserDefaults.standard
+    // Set the File Path for our App Sanbox files.
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let newItem = Item()
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
-        
-        let newItem2 = Item()
-        newItem2.title = "Learn Core Data"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem3.title = "Release App"
-        itemArray.append(newItem3)
-        
-        if let items = defaults.array(forKey: "ToDoListArray") as? [Item] {
-            itemArray = items
-        }
+        loadItems()
     }
     
     //MARK - TableView Datasource Methods
@@ -61,7 +48,7 @@ class TodoListViewController: UITableViewController {
         // Set Checkmark on Data and not Cell.
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        tableView.reloadData()
+        saveItems()
         
         // Clear the greyed selected Row.
         tableView.deselectRow(at: indexPath, animated: true)
@@ -69,16 +56,16 @@ class TodoListViewController: UITableViewController {
     
     //MARK - Add New Items
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
         var textField = UITextField()
         
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+        
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             let newItem = Item()
             newItem.title = textField.text!
             self.itemArray.append(newItem)
-            // Save to User Default
-            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
-            self.tableView.reloadData()
+            self.saveItems()
         }
         
         // Add a TextField to our Alert so user can type the new item they want to add.
@@ -89,6 +76,30 @@ class TodoListViewController: UITableViewController {
         
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
+    }
+    
+    //MARK - Model Manipulation Methods
+    
+    func saveItems() {
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Error encoding item Array, \(error)")
+        }
+        self.tableView.reloadData()
+    }
+    
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                print("Error decoding item array, \(error)")
+            }
+        }
     }
     
     
